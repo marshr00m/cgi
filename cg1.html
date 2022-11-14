@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width">
+ <title>CG1</title>
+</head>
+<body>
+    <canvas id="CG1" width="400" height="300" style="border: inset;">
+    HTML5 canvas
+    </canvas>
+    <script>
+    const canvas = document.getElementById('CG1')
+    const context = canvas.getContext('2d')
+    context.beginPath()
+    context.moveTo(10, 20)
+    context.lineTo(60, 20)
+    context.lineTo(60, 70)
+    context.lineTo(10, 70)
+    context.closePath()
+    context.stroke()
+    </script>
+</body>
+   

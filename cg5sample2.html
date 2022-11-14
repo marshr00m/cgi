@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>cg5sample</title>
+  <script>
+    'use strict'
+
+    // 図形の次元
+    const dimension = 3
+
+    // OpenGL ES のコンテキスト
+    let gl
+
+    //
+    // シェーダのソースプログラムを読み込んでコンパイルする
+    //
+    function compileShader(id) {
+
+      // シェーダの種類
+      const type = {
+        "x-shader/x-vertex": gl.VERTEX_SHADER,
+        "x-shader/x-fragment": gl.FRAGMENT_SHADER
+      }
+
+      // シェーダのソースプログラムを読み込む
+      const element = document.getElementById(id)
+      const source = element.text.trim()
+
+      // シェーダのソースプログラムをコンパイルする
+      const shader = gl.createShader(type[element.type])
+      gl.shaderSource(shader, source)
+      gl.compileShader(shader)
+
+      // コンパイルエラーが発生していたらエラーメッセージを表示する
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error(element.type + ':\n'
+          + gl.getShaderInfoLog(shader))
+        gl.deleteShader(shader)
+        return null
+      }
+
+      return shader
+    }
+
+    //
+    // プログラムオブジェクトを作成する
+    //
+    function loadShader(vertId, fragId) {
+
+      // バーテックスシェーダをコンパイルする
+      const vertShader = compileShader(vertId)
+
+      // フラグメントシェーダをコンパイルする
+      const fragShader = compileShader(fragId)
+
+      // エラーが発生していればプログラムオブジェクトを作成しない
+      if (!vertShader || !fragShader) return null
+
+      // プログラムオブジェクトを作成する
+      const program = gl.createProgram()
+
+      // バーテックスシェーダとフラグメントシェーダをリンクする
+      gl.attachShader(program, vertShader)
+      gl.deleteShader(vertShader)
+      gl.attachShader(program, fragShader)
+      gl.deleteShader(fragShader)
+      gl.linkProgram(program)
+
+      // リンクエラーが発生していたらエラーメッセージを表示する
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error('Link: ' + gl.getProgramInfoLog(program))
+        gl.deleteProgram(program)
+        return null
+      }
+
+      // 作成されたプログラムオブジェクトを返す
+      return program
+    }
+
+    //
+    // 頂点配列オブジェクトを作成する
+    //
+    function createObject(position, normal, index) {
+
+      // 頂点配列オブジェクトを作成する
+      const vao = gl.createVertexArray()
+
+      // 頂点配列オブジェクトを結合する
+      gl.bindVertexArray(vao)
+
+      // 頂点位置を格納するバッファオブジェクトを作成する
+      const vbo = gl.createBuffer()
+
+      // 作成したバッファオブジェクトを頂点バッファとして結合する
+      gl.bindBuffer(gl.ARRAY_BUFFER, vbo)
+
+      // 頂点バッファオブジェクトのバッファを確保してデータを転送する
+      gl.bufferData(gl.ARRAY_BUFFER,
+        new Float32Array(position), gl.STATIC_DRAW)
+
+      // 頂点バッファオブジェクトの先頭のインデックスを 0 に設定する
+      gl.vertexAttribPointer(0, dimension, gl.FLOAT, false, 0, 0)
+
+      // 0 番のインデックスを有効にする
+      gl.enableVertexAttribArray(0)
+
+      //法線ベクトルを格納するバッファオブジェクトを作成する
+      const nbo = gl.createBuffer()
+
+      // 作成したバッファオブジェクトを頂点バッファとして結合する
+      gl.bindBuffer(gl.ARRAY_BUFFER, nbo)
+
+      // 頂点バッファオブジェクトのバッファを確保してデータを転送する
+      gl.bufferData(gl.ARRAY_BUFFER,
+        new Float32Array(normal), gl.STATIC_DRAW)
+
+      // 頂点バッファオブジェクトの先頭のインデックスを 1 に設定する
+      gl.vertexAttribPointer(1, dimension, gl.FLOAT, false, 0, 0)
+
+      // 1 番のインデックスを有効にする
+      gl.enableVertexAttribArray(1)
+
+      // インデックスを格納するバッファオブジェクトを作成する
+      const ibo = gl.createBuffer()
+
+      // バッファオブジェクトをインデックスバッファとして結合する
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo)
+
+      // バッファを確保してデータを転送する
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
+        new Uint16Array(index), gl.STATIC_DRAW)
+
+      // 頂点配列オブジェクトの結合を解除する
+      gl.bindVertexArray(null)
+
+      // 作成した頂点配列オブジェクトと頂点数を返す
+      return { vao: vao, count: index.length }
+    }
+
+    //
+    // メッシュのインデックスを作成する
+    //
+    function createIndex(slices, stacks) {
+
+      // メッシュのインデックス
+      let index = []
+
+      // 2 つの三角形で 1 つのマス目のインデックスを作る
+      for (let j = 0; j < stacks; ++j) {
+        const k = (slices + 1) * j
+
+        for (let i = 0; i < slices; ++i) {
+
+          // 頂点のインデックス
+          const k0 = k + i
+          const k1 = k0 + 1
+          const k2 = k1 + slices
+          const k3 = k2 + 1
+
+          // 左下の三角形
+          index.push(k0, k2, k3)
+
+          // 右上の三角形
+          index.push(k0, k3, k1)
+        }
+      }
+
+      return index
+    }
+
+    //
+    // 球の生成
+    //
+    function createSphere(radius, slices, stacks) {
+
+      // 位置
+      let position = []
+
+      // 法線
+      let normal = []
+
+      // 頂点属性を作る
+      for (let j = 0; j <= stacks; ++j) {
+
+        // 格子点の縦位置
+        const t = j / stacks
+
+        // 仰角（緯度）
+        const v = Math.PI * t
+
+        // 高さ
+        const y = radius * Math.cos(v)
+
+        // その高さにおける半径
+        const r = radius * Math.sin(v)
+
+        // 経度方向
+        for (let i = 0; i <= slices; ++i) {
+
+          // 格子点の横位置
+          const s = i / slices
+
+          // 方位角（経度）
+          const u = 2 * Math.PI * s
+
+          // 位置
+          const z = r * Math.cos(u)
+          const x = r * Math.sin(u)
+          position.push(x, y, z)
+
+          // 法線は中心からその位置に向かうベクトル
+          const n = normalize([x, y, z])
+          normal.push(n[0], n[1], n[2])
+        }
+      }
+
+      // メッシュのインデックスを作る
+      const index = createIndex(slices, stacks)
+
+      return createObject(position, normal, index)
+    }
+
+    //
+    // 描画する
+    //
+    function draw(object) {
+
+      //カンバス内の表示を消去する
+      gl.clear(gl.COLOR_BUFFER_BIT)
+
+      // 描画する頂点配列オブジェクト（図形）を指定する
+      gl.bindVertexArray(object.vao)
+
+      // インデックスを使って描画する
+      gl.drawElements(gl.TRIANGLES, object.count, gl.UNSIGNED_SHORT, 0)
+
+      // インデックスバッファオブジェクトの結合を解除する
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
+
+      // 頂点配列オブジェクトの指定を解除する
+      gl.bindVertexArray(null)
+    }
+
+    //
+    // 行列の積を求める
+    //
+    function multiply(a, b) {
+      let c = []
+      for (let k = 0; k < 16; k += 4) {
+        for (let j = 0; j < 4; ++j) {
+          c[j + k] = 0
+          for (let i = 0; i < 4; ++i) {
+            c[j + k] += a[i * 4 + j] * b[i + k]
+          }
+        }
+      }
+      return c
+    }
+
+    //
+    // ベクトルの差を求める
+    //
+    function sub(a, b) {
+      return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+    }
+
+    //
+    // ベクトルの内積を求める
+    //
+    function dot(a, b) {
+      return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+    }
+
+    //
+    // ベクトルの外積を求める
+    //
+    function cross(a, b) {
+      return [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0]
+      ]
+    }
+
+    //
+    // ベクトルの長さを求める
+    //
+    function length(a) {
+      return Math.sqrt(dot(a, a))
+    }
+
+    //
+    // ベクトルを正規化する
+    //
+    function normalize(a) {
+      const l = length(a)
+      if (l == 0) l = 1 // 0 ベクトルなら 0 による除算を避ける
+      return a.map(x => x / l)
+    }
+
+    //
+    // 平行移動の変換行列を求める
+    //
+    function translate(t) {
+      return [
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        t[0], t[1], t[2], 1
+      ]
+    }
+
+    //
+    // 視野変換行列を求める
+    //
+    function lookat(e, g, u) {
+
+      // 平行移動の変換行列
+      const mt = translate([-e[0], -e[1], -e[2]])
+
+      // t 軸 = e - g
+      const t = sub(e, g)
+
+      // r 軸 = u x t 軸
+      const r = cross(u, t)
+
+      // s 軸 = t 軸 x r 軸
+      const s = cross(t, r)
+
+      // s の長さ
+      const sl = length(s)
+
+      // l が 0 だったら平行移動だけにする
+      if (sl == 0) return mt
+
+      // r の長さ
+      const rl = length(r)
+
+      // t の長さ
+      const tl = length(t)
+
+      // 回転の変換行列
+      const mr = [
+        r[0] / rl, s[0] / sl, t[0] / tl, 0,
+        r[1] / rl, s[1] / sl, t[1] / tl, 0,
+        r[2] / rl, s[2] / sl, t[2] / tl, 0,
+        0, 0, 0, 1
+      ]
+
+      // 平行移動してから回転
+      return multiply(mr, mt)
+    }
+
+    //
+    // 透視投影変換行列を求める
+    //
+    function perspective(fovy, aspect, near, far) {
+      const f = 1 / Math.tan(fovy / 2)
+      const d = near - far
+      return [
+        f / aspect, 0, 0, 0,
+        0, f, 0, 0,
+        0, 0, (far + near) / d, -1,
+        0, 0, (2 * far * near) / d, 0
+      ]
+    }
+
+    //
+    // 法線ベクトルの変換行列を求める
+    //
+    function normalMatrix(m) {
+      return [
+        m[ 5] * m[10] - m[ 6] * m[ 9],
+        m[ 6] * m[ 8] - m[ 4] * m[10],
+        m[ 4] * m[ 9] - m[ 5] * m[ 8],
+        m[ 9] * m[ 2] - m[10] * m[ 1],
+        m[10] * m[ 0] - m[ 8] * m[ 2],
+        m[ 8] * m[ 1] - m[ 9] * m[ 0],
+        m[ 1] * m[ 6] - m[ 2] * m[ 5],
+        m[ 2] * m[ 4] - m[ 0] * m[ 6],
+        m[ 0] * m[ 5] - m[ 1] * m[ 4]
+      ]
+    }
+  </script>
+</head>
+
+<body>
+  <script id="vertex-shader" type="x-shader/x-vertex">
+    #version 300 es
+    //
+    // バーテックスシェーダのソースプログラム
+    //
+    precision mediump float;
+  
+    //
+    // 課題 5 (1) 陰影付けを行うように修正してください
+    //
+
+    // 頂点属性
+    layout (location = 0) in vec4 position;
+  
+    // 変換行列
+    uniform mat4 mp;      // 投影変換行列
+    uniform mat4 mv;      // モデルビュー変換行列
+    
+    void main()
+    {
+      // 視点座標系における頂点の位置
+      vec4 p = mv * position;
+    
+      // クリッピング座標系における頂点の位置
+      gl_Position = mp * p;
+    }
+  </script>
+  <script id="fragment-shader" type="x-shader/x-fragment">
+    #version 300 es
+    //
+    // フラグメントシェーダのソースプログラム
+    //
+    precision mediump float;
+  
+    //
+    // 課題 5 (1) 陰影付けを行うように修正してください
+    //
+
+    // フレームバッファのカラーバッファ
+    layout (location = 0) out vec4 color;
+  
+    void main()
+    {
+      // 環境光の反射光強度と拡散反射光強度と鏡面反射光強度の和
+      color = vec4(0.8, 0.6, 0.2, 1.0);
+    }
+  </script>
+  
+  <h1>課題 5 (1)</h1>
+  <canvas id="canvas1" width="400" height="300" style="border: inset;">
+    HTML5 の canvas が使えません
+  </canvas>
+  <script>
+    {
+      const canvas = document.getElementById('canvas1')
+      gl = canvas.getContext('webgl2')
+
+      // 背面カリングを有効にする
+      gl.enable(gl.CULL_FACE)
+
+      // デプスバッファを有効にする
+      gl.enable(gl.DEPTH_TEST)
+
+      // ビューポートと背景色を設定する
+      gl.viewport(0, 0, canvas.width, canvas.height)
+      gl.clearColor(0.2, 0.3, 0.4, 1.0)
+
+      // 図形を生成する
+      const object = createSphere(2, 64, 32)
+
+      //
+      // 課題 5 (1) 以下を陰影付けを行うように修正してください
+      //
+
+      // シェーダを読み込む
+      const shader = loadShader('vertex-shader', 'fragment-shader')
+
+      // uniform 変数の場所を調べる
+      const mpLoc = gl.getUniformLocation(shader, "mp")
+      const mvLoc = gl.getUniformLocation(shader, "mv")
+
+      // 描画に使うシェーダを指定する
+      gl.useProgram(shader)
+
+      // モデルビュー変換行列を求める
+      const mv = lookat([3, 4, 5], [0, 0, 0], [0, 1, 0])
+
+      // 投影変換行列を求める
+      const mp = perspective(1, canvas.width / canvas.height, 1, 10)
+
+      // 変換行列の uniform 変数を設定する
+      gl.uniformMatrix4fv(mpLoc, false, mp)
+      gl.uniformMatrix4fv(mvLoc, false, mv)
+
+      // 図形を描く
+      draw(object)
+    }
+  </script>
+
+  <h1>課題 5 (2)</h1>
+  <canvas id="canvas2" width="400" height="300" style="border: inset;">
+    HTML5 の canvas が使えません
+  </canvas>
+  <script>
+    {
+      //
+      // 円柱の生成
+      //
+      function createCylinder(radius, height, slices, stacks) {
+
+        //
+        // 課題 5 (2) 関数内の 1 行を書き換えて円柱を描く関数を定義してください
+        //
+        return createSphere(radius, slices, stacks)
+      }
+
+      const canvas = document.getElementById('canvas2')
+      gl = canvas.getContext('webgl2')
+
+      // 背面カリングを無効にする
+      gl.disable(gl.CULL_FACE)
+
+      // デプスバッファを有効にする
+      gl.enable(gl.DEPTH_TEST)
+
+      // ビューポートと背景色を設定する
+      gl.viewport(0, 0, canvas.width, canvas.height)
+      gl.clearColor(0.2, 0.4, 0.3, 1.0)
+
+      // 図形を生成する
+      const object = createCylinder(2, 4, 64, 3)
+
+      //
+      // 課題 5 (1) 以下を陰影付けを行うように修正してください
+      //
+      
+      // シェーダを読み込む
+      const shader = loadShader('vertex-shader', 'fragment-shader')
+
+      // uniform 変数の場所を調べる
+      const mpLoc = gl.getUniformLocation(shader, "mp")
+      const mvLoc = gl.getUniformLocation(shader, "mv")
+
+      // 描画に使うシェーダを指定する
+      gl.useProgram(shader)
+
+      // モデルビュー変換行列を求める
+      const mv = lookat([3, 4, 5], [0, 0, 0], [0, 1, 0])
+
+      // 投影変換行列を求める
+      const mp = perspective(1, canvas.width / canvas.height, 1, 10)
+
+      // 変換行列の uniform 変数を設定する
+      gl.uniformMatrix4fv(mpLoc, false, mp)
+      gl.uniformMatrix4fv(mvLoc, false, mv)
+
+      // 図形を描く
+      draw(object)
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>CG1</title>
+</head>
+
+<body>
+
+  <h1>課題 1 (1)</h1>
+  <canvas id="CG1-1" width="400" height="300" style="border: inset;">
+    課題 1 (1)
+  </canvas>
+  <script>
+    const canvas1 = document.getElementById('CG1-1')
+    const context1 = canvas1.getContext('2d')
+
+    // 以下を課題 1 (1) の図形を描くスクリプトに書き換えてください
+    context1.beginPath()
+    context1.moveTo(200, 50)
+    context1.lineTo(200 + 100 * Math.sin(2 * Math.PI * 2 / 5), 150 - 100 * Math.cos(2 * Math.PI * 2 / 5))
+    context1.lineTo(200 + 100 * Math.sin(2 * Math.PI * 4 / 5), 150 - 100 * Math.cos(2 * Math.PI * 4 / 5))
+    context1.lineTo(200 + 100 * Math.sin(2 * Math.PI * 1 / 5), 150 - 100 * Math.cos(2 * Math.PI * 1 / 5))
+    context1.lineTo(200 + 100 * Math.sin(2 * Math.PI * 3 / 5), 150 -   100 * Math.cos(2 * Math.PI * 3 / 5))
+    context1.closePath()
+    context1.stroke()
+  </script>
+
+  <h1>課題 1 (2)</h1>
+  <canvas id="CG1-2" width="400" height="300" style="border: inset;">
+    課題 1 (2)
+  </canvas>
+  <script>
+    const canvas2 = document.getElementById('CG1-2')
+    const context2 = canvas2.getContext('2d')
+
+    // 以下を課題 1 (2) の図形を描くスクリプトを書き換えてください
+    context2.beginPath()
+    context2.moveTo(10, 20)
+    context2.fillRect(150, 100, 200, 150);
+    context2.stroke()
+  </script>
+
+  <h1>課題 1 (3)</h1>
+  <canvas id="CG1-3" width="400" height="300" style="border: inset;">
+    課題 1 (3)
+  </canvas>
+  <script>
+    const canvas3 = document.getElementById('CG1-3')
+    const context3 = canvas3.getContext('2d')
+
+    // 以下を課題 1 (3) の図形を描くスクリプトを書き換えてください
+    context3.beginPath()
+    for (i = 0; i< 20; i++){
+      for(j = 0; j< 15; j++){
+      context3.fillRect(5+20 * i, 5+20 * j, 10, 10)
+      }
+    }
+    context3.stroke()
+  </script>
+
+</body>
+
+</html>
